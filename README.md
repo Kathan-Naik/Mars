@@ -138,3 +138,26 @@ The system is designed around a conversational entry point, agent-based intellig
 
 This separation ensures modularity, scalability, and efficient reuse of data and research outputs.
 
+## MARS — Quick Setup
+
+```bash
+# Clone
+git clone https://github.com/Kathan-Naik/Mars.git
+cd Mars
+
+# Virtual env
+python -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\Activate.ps1
+
+# Install deps
+pip install -r requirements.txt
+
+# Env vars
+echo "OPENAI_API_KEY=your_key_here" > .env
+echo "TAVILY_API_KEY"=your_key_here" > .env
+
+# Run
+python fetch.py        # download 10-Ks
+uvicorn server:app --reload
+
+
