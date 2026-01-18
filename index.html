@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Company Research Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #020617;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --border: #1e293b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  gap: 0;
+}
+
+.app-container.no-chart {
+  justify-content: center;
+}
+
+.app-container.no-chart .main-panel {
+  flex: unset;
+  width: 60vw;
+
+}
+
+.app-container.no-chart .card {
+  height: 100vh;
+}
+
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  overflow: hidden;
+}
+
+.chart-panel {
+  width: 45%;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  overflow: hidden;
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+
+.chart-panel.hidden {
+  display: none;
+  transform: translateX(40px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chart-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chart-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.close-chart {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.close-chart:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.chart-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.chart-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 40px;
+  background: var(--card);
+  border-radius: 10px;
+}
+
+.chart-placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: 16px;
+}
+
+.header h1 { margin: 0; font-size: 26px; }
+
+.subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.chat {
+  flex: 1;
+  overflow-y: scroll;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.chat::-webkit-scrollbar { width: 0; background: transparent; }
+
+.message {
+  margin: 8px 0;
+  max-width: 75%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 14px;
+  position: relative;
+  border: 1px solid var(--border);
+}
+
+.message p {
+  margin: 0;
+}
+
+.message p + p {
+  margin-top: 4px;
+}
+
+.message ul, .message ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.message li {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.message a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.message.user {
+  margin-left: auto;
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+  color: #020617;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15);
+}
+
+.message.assistant {
+  margin-right: auto;
+  background: #020617;
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.message.user::before { content: "You"; position: absolute; top: -20px; right: 8px; font-size: 11px; color: var(--muted); }
+.message.assistant::before { content: "Agent"; position: absolute; top: -20px; left: 8px; font-size: 11px; color: var(--muted); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.message { animation: fadeInUp 0.2s ease-out; }
+
+.input-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+input {
+  flex: 1;
+  background: #020617;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+input::placeholder { color: var(--muted); }
+
+button {
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #020617;
+}
+
+button:hover { opacity: 0.9; }
+
+.footer {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 1200px) {
+  .chart-panel {
+    width: 50%;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .chart-panel {
+    width: 100%;
+    height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  
+  .main-panel {
+    padding: 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="app-container">
+  <!-- Main Chat Panel -->
+  <div class="main-panel">
+    <div class="card">
+      <div class="header">
+        <h1><a href="flow/flow.png" style="text-decoration: none;">🤖 </a>MARS: Multi-Agent Research System</h1>
+        <div class="subtitle">
+          Family of AI Agents and Tools to support deep company research and analysis.
+        </div>
+      </div>
+
+      <div id="chat" class="chat"></div>
+
+      <div class="input-bar">
+        <input id="input" placeholder="Ask me to research a company, list reports, or analyze insights…"
+               onkeydown="if(event.key==='Enter') send()" />
+        <button onclick="send()">Send</button>
+      </div>
+
+      <div class="footer">
+        Powered by Multi-Agent Research System (MARS)
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Panel -->
+  <div id="chartPanel" class="chart-panel hidden">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h2 id="chartTitle">📊 Chart</h2>
+        <button class="close-chart" onclick="closeChart()">✕ Close</button>
+      </div>
+      <div class="chart-content" id="chartContent">
+        <div id="chartPlaceholder" class="chart-placeholder">
+          <div class="chart-placeholder-icon">📈</div>
+          <div>Charts will appear here when requested</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const chartPanel = document.getElementById("chartPanel");
+const chartContent = document.getElementById("chartContent");
+const chartTitle = document.getElementById("chartTitle");
+const chartPlaceholder = document.getElementById("chartPlaceholder");
+const API_URL = "http://127.0.0.1:8000/chat";
+
+const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const SYSTEM_MESSAGE = {
+  role: "system",
+  content: "You are a professional company research assistant named MARS. Make the most use of the tools provided to you. Always respond using Markdown formatting, including bullet points, headings, links, and line breaks."
+};
+
+let conversationHistory = [SYSTEM_MESSAGE];
+let currentWidget = null;
+
+function formatReports(text) {
+  return text.replace(/(\b\w+\.html\b)/g, (match) => `[${match}](reports/${match})`);
+}
+
+function showChart(symbol, timeframe) {
+  document.querySelector('.app-container').classList.remove('no-chart');
+  chartPanel.classList.remove('hidden');
+  chartPlaceholder.style.display = 'none';
+  
+  // Clear previous chart
+  chartContent.innerHTML = '';
+  
+  // Create new chart container
+  const chartDiv = document.createElement('div');
+  chartDiv.id = 'tradingview_widget';
+  chartDiv.style.height = '100%';
+  chartDiv.style.width = '100%';
+  chartContent.appendChild(chartDiv);
+  
+  // Map timeframes
+  const intervalMap = {
+    "1D": "D",
+    "1M": "W",
+    "1Y": "M"
+  };
+  
+  const interval = intervalMap[timeframe] || "D";
+  
+  // Create TradingView widget
+  currentWidget = new TradingView.widget({
+    "autosize": true,
+    "symbol": symbol,
+    "interval": interval,
+    "timezone": "Etc/UTC",
+    "theme": "light",
+    "style": "1",
+    "locale": "en",
+    "toolbar_bg": "#f1f3f6",
+    "enable_publishing": false,
+    "hide_side_toolbar": false,
+    "allow_symbol_change": true,
+    "container_id": "tradingview_widget"
+  });
+  
+  chartTitle.textContent = `${symbol} - ${timeframe}`;
+}
+
+function closeChart() {
+  document.querySelector('.app-container').classList.add('no-chart');
+  chartPanel.classList.add('hidden');
+  chartPlaceholder.style.display = 'flex';
+  chartContent.innerHTML = `
+    <div id="chartPlaceholder" class="chart-placeholder">
+      <div class="chart-placeholder-icon">📈</div>
+      <div>Charts will appear here when requested</div>
+    </div>
+  `;
+  currentWidget = null;
+}
+
+function addMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = `message ${role}`;
+
+  text = text.replace(/\\n/g, "\n");
+  text = formatReports(text);
+  div.innerHTML = marked.parse(text, { breaks: true });
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = "";
+  
+  addMessage("user", text);
+  conversationHistory.push({ role: "user", content: text });
+
+  addMessage("assistant", "⏳ Thinking...");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        messages: conversationHistory,
+        session_id: SESSION_ID 
+      })
+    });
+
+    const data = await res.json();
+    
+    if (chat.lastChild?.classList.contains("assistant")) {
+      chat.lastChild.remove();
+    }
+
+    let reply = "";
+    
+    if (data.response) {
+      reply = data.response;
+    } else if (data.error) {
+      reply = `Error: ${data.error}`;
+      if (data.details) {
+        reply += `\n\nDetails: ${data.details}`;
+      }
+    } else if (typeof data === 'string') {
+      reply = data.replace(/^"+|"+$/g, "");
+    } else {
+      reply = "Received unexpected response format";
+      console.error("Unexpected response:", data);
+    }
+
+    addMessage("assistant", reply);
+    conversationHistory.push({ role: "assistant", content: reply });
+    
+    // Check if there are charts to display
+    if (data.charts && data.charts.length > 0) {
+      const chart = data.charts[0]; // Display the first chart
+      showChart(chart.symbol, chart.timeframe);
+      
+      // Clear the chart queue
+      data.charts = [];
+    }
+
+  } catch (err) {
+    if (chat.lastChild?.classList.contains("assistant")) {
+      chat.lastChild.remove();
+    }
+    
+    addMessage("assistant", "Error connecting to research agent.");
+    console.error("Connection error:", err);
+  }
+}
+document.querySelector('.app-container').classList.add('no-chart');
+
+</script>
+</body>
+</html>
